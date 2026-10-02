@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>MED v2.0 — الدفاع المدني السوري | منظومة متكاملة</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root{--bg:#141d2e;--bg2:#1b2740;--card:#212e49;--border:#33436a;--orange:#ff5a2a;--gold:#ffb300;--green:#00d68f;--red:#ff3b5c;--text:#eef2ff;--muted:#93a3c4;--term:#00ff9d}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+/* شاشة الإقلاع + التيرمينال */
+#splash{position:fixed;inset:0;background:#05080f;z-index:5000;display:grid;place-items:center;padding:18px}
+#splash.off{display:none}
+.termbox{width:100%;max-width:560px;background:#03060c;border:1px solid #123f2c;border-radius:14px;padding:16px;box-shadow:0 0 40px rgba(0,255,157,.15)}
+.termbox .bar{display:flex;gap:6px;margin-bottom:10px}
+.termbox .bar i{width:11px;height:11px;border-radius:50%;display:block}
+#bootTerm{font-family:Consolas,monospace;direction:ltr;text-align:left;font-size:13px;line-height:1.9;color:var(--term);min-height:220px;white-space:pre-wrap}
+#bootTerm .dev{color:#ffd866;font-weight:800}
+.cursor{display:inline-block;width:9px;height:16px;background:var(--term);vertical-align:-3px;animation:blink 1s infinite}
+@keyframes blink{50%{opacity:0}}
+#enterApp{display:none;width:100%;margin-top:12px;border:0;border-radius:12px;padding:15px;font-size:17px;font-weight:900;background:linear-gradient(135deg,var(--orange),var(--gold));cursor:pointer}
+.top{position:sticky;top:0;z-index:1000;background:#101828;border-bottom:1px solid var(--border);padding:10px 12px}
+.top h1{font-size:16px;margin:0;text-align:center}
+.top h1 small{display:block;font-size:11px;color:var(--muted);font-weight:400}
+.roles{display:flex;gap:6px;margin-top:10px}
+.role{flex:1;border:1px solid var(--border);background:var(--bg2);color:var(--text);border-radius:12px;padding:10px 2px;font-size:12px;font-weight:800;cursor:pointer}
+.role.active{background:var(--orange);border-color:var(--orange)}
+.wrap{max-width:1100px;margin:auto;padding:12px 12px 90px}
+.view{display:none}.view.on{display:block}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px;margin-bottom:12px}
+.card h3{margin:0 0 10px;font-size:14px;color:var(--gold)}
+.sos{width:100%;border:0;border-radius:14px;background:linear-gradient(135deg,#ff5a2a,#ff7a3c);color:#fff;font-size:19px;font-weight:900;padding:18px;cursor:pointer;box-shadow:0 6px 24px rgba(255,90,42,.4)}
+.types{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}
+.type{border:1px solid var(--border);background:var(--bg2);border-radius:12px;padding:10px 4px;text-align:center;font-size:12px;cursor:pointer}
+.type.sel{border-color:var(--gold);background:#2c3a5e;box-shadow:0 0 0 2px var(--gold)}
+.type .ic{font-size:24px}
+.map{height:280px;border-radius:12px;border:1px solid var(--border);z-index:1}
+.map.tall{height:340px}
+textarea,input,select{width:100%;border-radius:10px;border:1px solid var(--border);background:#0f1830;color:var(--text);padding:11px;font-size:14px;font-family:inherit}
+.btn{border:0;border-radius:12px;padding:13px 16px;font-size:15px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:6px;justify-content:center}
+.btn-gold{background:var(--gold);color:#221a00;flex:1}
+.btn-orange{background:var(--orange);color:#fff;flex:1}
+.btn-ghost{background:#2a3a5e;color:var(--text);border:1px solid var(--border)}
+.btn-green{background:var(--green);color:#04281c}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.rep{border:1px solid var(--border);background:var(--bg2);border-radius:12px;padding:10px;margin-bottom:8px;cursor:pointer}
+.rep.sel{border-color:var(--gold)}
+.rep .id{font-family:monospace;direction:ltr;color:var(--gold);font-size:12px}
+.badge{font-size:11px;padding:3px 10px;border-radius:999px;background:#2a3a5e}
+.badge.new{background:var(--red)}.badge.proc{background:var(--gold);color:#221a00}.badge.done{background:var(--green);color:#04281c}
+.timer{font-size:26px;font-weight:900;color:var(--red)}
+.kv{display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px dashed #2e3f66;font-size:13px}
+.kv:last-child{border:0}.kv span{color:var(--muted)}
+.kv b{word-break:break-word}
+.tl{font-size:12px;color:var(--muted);line-height:2}
+.tl b{color:var(--text)}
+.center-row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid #2b3c63;font-size:13px}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+.nav{position:fixed;bottom:0;right:0;left:0;background:#101828;border-top:1px solid var(--border);display:flex;padding:8px;z-index:1000}
+.nav button{flex:1;background:none;border:0;color:var(--muted);font-size:11px;padding:8px;cursor:pointer}
+.nav button.on{color:var(--gold);font-weight:800}
+#toast{position:fixed;top:70px;right:12px;left:12px;z-index:2000;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toastmsg{background:#0c1426;border:1px solid var(--gold);border-radius:12px;padding:12px;font-size:14px;box-shadow:0 8px 30px rgba(0,0,0,.5)}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:3000;display:none;place-items:center;padding:16px}
+.modal.on{display:grid}
+.modal .box{background:var(--card);border-radius:16px;padding:14px;width:100%;max-width:520px;border:1px solid var(--border)}
+video{width:100%;border-radius:12px;background:#000}
+.small{font-size:12px;color:var(--muted);line-height:1.9}
+.grid2{display:grid;gap:12px}@media(min-width:800px){.grid2{grid-template-columns:1fr 1fr}}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center}
+.stat{background:#0f1830;border:1px solid var(--border);border-radius:12px;padding:10px 4px}
+.stat b{font-size:20px;display:block}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th,td{padding:8px;border-bottom:1px solid #2b3c63;text-align:right}
+th{color:var(--muted)}
+.termline{font-family:Consolas,monospace;direction:ltr;text-align:left;font-size:12px;line-height:2;color:var(--term)}
+.termline .dev{color:#ffd866;font-weight:800}
+img.thumb{width:100%;border-radius:10px;border:1px solid var(--border);margin-top:8px}
+.check{display:flex;align-items:center;gap:8px;font-size:13px;margin-top:8px}
+.check input{width:auto}
+</style>
+</head>
+<body>
+
+<!-- شاشة الإقلاع -->
+<div id="splash">
+<div class="termbox">
+<div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i></div>
+<div id="bootTerm"></div>
+<button id="enterApp">دخول منظومة MED 🚑</button>
+</div>
+</div>
+
+<div class="top">
+<h1>🚑 MED v2.0 — الدفاع المدني السوري <small>مواطن • مركزية • فرعية • ميداني • إدارة</small></h1>
+<div class="roles">
+<button class="role active" data-r="citizen">🧍 مواطن</button>
+<button class="role" data-r="central">🏛️ المركزية <span id="pendingCount"></span></button>
+<button class="role" data-r="sub">🏢 الفرعية</button>
+<button class="role" data-r="field">🚒 ميداني</button>
+<button class="role" data-r="db">🗄️ إدارة</button>
+</div>
+</div>
+
+<div class="wrap">
+
+<!-- المواطن -->
+<div class="view on" id="v-citizen">
+<div class="card">
+<button class="sos" id="sosBtn">🆘 تقديم بلاغ طوارئ</button>
+<div class="small" style="text-align:center;margin-top:6px">الموقع الجغرافي <b>إجباري</b> — البلاغ لا يُرسل بدونه. عند الدخول يُطلب إذن الموقع، وعند الإرسال يُتحقق مرة ثانية.</div>
+<label class="check"><input type="checkbox" id="silentMode"> 🤫 وضع صامت (للمحاصرين — بدون صوت ولا اهتزاز)</label>
+</div>
+<div class="card"><h3>📍 موقعك الحالي (دقيق)</h3>
+<div id="mapC" class="map"></div>
+<div class="kv"><span>الإحداثيات</span><b id="cCoords" style="direction:ltr">—</b></div>
+<div class="kv"><span>الدقة</span><b id="cAcc">—</b></div>
+<div class="row">
+<button class="btn btn-ghost" id="gpsBtn">🎯 جلب موقعي GPS</button>
+<button class="btn btn-ghost" id="pinBtn">📌 تثبيت يدوي</button>
+</div>
+<div class="small" id="gpsStatus"></div>
+<div class="small">📵 بلا إنترنت؟ يُحفظ البلاغ في الجهاز ويُرسل تلقائياً عند عودة الشبكة + يمكنك إرسال الإحداثيات SMS.</div>
+</div>
+<div class="card"><h3>🔥 نوع الطوارئ</h3>
+<div class="types" id="ctype">
+<div class="type sel" data-t="حريق"><div class="ic">🔥</div>حرائق</div>
+<div class="type" data-t="إسعاف"><div class="ic">🚑</div>إسعاف</div>
+<div class="type" data-t="إنقاذ"><div class="ic">🧗</div>إنقاذ</div>
+<div class="type" data-t="انهيارات"><div class="ic">🏚️</div>انهيارات</div>
+</div>
+<textarea id="cDetails" rows="2" placeholder="تفاصيل (مثال: حريق شقة طابق ثالث، يوجد أطفال)..."></textarea>
+<input id="cPhone" inputmode="tel" placeholder="رقم الهاتف (يُسرّع الوصول)" style="margin-top:8px">
+<label class="small" style="display:block;margin-top:8px">📷 صورة من الموقع (اختياري — تساعد الفريق):</label>
+<input type="file" id="cPhoto" accept="image/*" capture="environment">
+<img id="photoPrev" class="thumb" style="display:none">
+<div class="row"><button class="btn btn-gold" id="sendBtn">📤 إرسال بلاغ طوارئ</button></div>
+<div id="smsBox"></div>
+</div>
+<div class="card"><h3>📜 بلاغاتي</h3><div id="myReps"><div class="small">لا بلاغات بعد.</div></div></div>
+</div>
+
+<!-- المركزية -->
+<div class="view" id="v-central">
+<div class="card"><h3>📊 لوحة المركزية — إحصائيات حية</h3><div class="stats" id="stats"></div></div>
+<div class="grid2">
+<div class="card"><h3>🔔 البلاغات الواردة</h3><div id="inbox"></div></div>
+<div class="card"><h3>🗺️ القرار والإسناد</h3>
+<div id="selInfo"><div class="small">اختر بلاغاً لعرض موقعه وأقرب المراكز.</div></div>
+<div id="mapO" class="map tall" style="margin-top:8px"></div>
+<div id="nearList" style="margin-top:8px"></div>
+<div class="row"><button class="btn btn-orange" id="dispatchBtn" disabled>📤 إرسال للمركز</button></div>
+<div class="row">
+<select id="fwdGov"></select>
+<button class="btn btn-ghost" id="fwdBtn">🏢 تحويل للغرفة الفرعية</button>
+</div>
+<div class="small">🔒 البلاغ المُسند يُقفل نهائياً. كل حركة بسجل تدقيق مرئي للجميع.</div>
+</div>
+</div>
+<div class="card"><h3>⏱️ الإسناد الذكي (30 ثانية)</h3>
+<div class="small">بلاغ بلا تأكيد خلال 30 ثانية (مشغّل نائم/مشغول) → إسناد تلقائي لأقرب مركز + إشعار للجميع.</div></div>
+</div>
+
+<!-- الفرعية -->
+<div class="view" id="v-sub">
+<div class="card"><h3>🏢 الغرفة الفرعية — حسب المحافظة</h3>
+<select id="subGov"></select>
+<div class="small">ترى فقط البلاغات المحوَّلة لمحافظتك من المركزية، وتُسندها لمراكز محافظتك.</div>
+<div id="subList" style="margin-top:8px"></div>
+</div>
+</div>
+
+<!-- الميداني -->
+<div class="view" id="v-field">
+<div class="card"><h3>🚒 بلاغات مركزك</h3>
+<select id="fieldCenter"></select>
+<div id="fieldList" style="margin-top:8px"></div>
+</div>
+<div class="card"><h3>📷 توثيق مباشر</h3>
+<div class="small">بث الفريق + لقطات تُرفق بسجل البلاغ في المركزية لحظة بلحظة.</div>
+<div class="row"><button class="btn btn-ghost" id="camBtn">📷 فتح كاميرا التوثيق</button></div>
+</div>
+</div>
+
+<!-- الإدارة -->
+<div class="view" id="v-db">
+<div class="card"><h3>🗄️ قاعدة المراكز (صاحب التطبيق)</h3><div id="dbList"></div></div>
+<div class="card"><h3>➕ إضافة مركز</h3>
+<input id="nName" placeholder="اسم المركز">
+<div class="grid2" style="margin-top:8px">
+<input id="nLat" type="number" step="any" placeholder="خط العرض">
+<input id="nLon" type="number" step="any" placeholder="خط الطول">
+</div>
+<div class="grid2" style="margin-top:8px">
+<select id="nGov"></select>
+<select id="nType"><option>دفاع مدني</option><option>إسعاف</option><option>نقطة طبية</option></select>
+</div>
+<div class="row"><button class="btn btn-green" id="addCenter">➕ حفظ</button>
+<button class="btn btn-ghost" id="resetDb">🔄 استعادة الافتراضي</button></div>
+</div>
+</div>
+
+<!-- المطور -->
+<div class="card"><h3>💻 المطوّر</h3>
+<div class="termbox" style="max-width:none">
+<div class="termline">$ whoami<br><span class="dev">محمد الحسين — Muhammad Al-Hussein</span><br>$ med --version<br>MED v2.0 — Syrian Civil Defense Emergency System © 2026<br>$ mission<br>إيصال البلاغ الصحيح.. للفريق الأقرب.. في أصعب الظروف<span class="cursor"></span></div>
+</div>
+<div class="small" style="text-align:center;margin-top:6px">طُوّر بواسطة <b>محمد الحسين</b> لخدمة فرق الدفاع المدني السوري 🤍</div>
+</div>
+
+</div>
+
+<div class="nav">
+<button class="on" data-r="citizen">🧍<br>مواطن</button>
+<button data-r="central">🏛️<br>مركزية</button>
+<button data-r="sub">🏢<br>فرعية</button>
+<button data-r="field">🚒<br>ميداني</button>
+<button data-r="db">🗄️<br>إدارة</button>
+</div>
+
+<div id="toast"></div>
+
+<div class="modal" id="authModal"><div class="box">
+<h3 style="margin-top:0" id="authTitle">🔒 دخول</h3>
+<div class="small" id="authHint"></div>
+<input type="password" id="authPin" inputmode="numeric" placeholder="رمز الدخول PIN" style="margin-top:8px">
+<div class="row">
+<button class="btn btn-gold" id="authOk">دخول</button>
+<button class="btn btn-ghost" id="authCancel">إلغاء</button>
+</div>
+</div></div>
+
+<div class="modal" id="camModal"><div class="box">
+<h3 style="margin-top:0">📷 كاميرا التوثيق</h3>
+<video id="camVideo" autoplay playsinline></video>
+<div class="row">
+<button class="btn btn-gold" id="snapBtn">📸 التقاط وإرفاق</button>
+<button class="btn btn-ghost" id="camClose">✖ إغلاق</button>
+</div><div id="snaps" class="small"></div>
+</div></div>
+
+<script>
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const LS='med_db_v2', DEV='محمد الحسين';
+const PINS={central:{pin:'1122',name:'الغرفة المركزية'},sub:{pin:'2211',name:'الغرفة الفرعية'},field:{pin:'3344',name:'المركز الميداني'},db:{pin:'9999',name:'إدارة التطبيق'}};
+const AUTH={};
+const SEED_CENTERS=[
+ {id:'C01',name:'مركز دمشق — المزة',type:'دفاع مدني',gov:'دمشق',lat:33.5138,lon:36.2765},
+ {id:'C02',name:'مركز حلب — الفرقان',type:'دفاع مدني',gov:'حلب',lat:36.1900,lon:37.1200},
+ {id:'C03',name:'مركز إدلب الرئيسي',type:'دفاع مدني',gov:'إدلب',lat:35.9300,lon:36.6300},
+ {id:'C04',name:'مركز معرة النعمان',type:'دفاع مدني',gov:'إدلب',lat:35.6500,lon:36.6700},
+ {id:'C05',name:'مركز جسر الشغور',type:'دفاع مدني',gov:'إدلب',lat:35.8100,lon:36.3200},
+ {id:'C06',name:'مركز حماة',type:'دفاع مدني',gov:'حماة',lat:35.1300,lon:36.7500},
+ {id:'C07',name:'مركز حمص',type:'دفاع مدني',gov:'حمص',lat:34.7300,lon:36.7200},
+ {id:'C08',name:'مركز اللاذقية',type:'دفاع مدني',gov:'اللاذقية',lat:35.5300,lon:35.7800},
+ {id:'C09',name:'مركز درعا',type:'دفاع مدني',gov:'درعا',lat:32.6200,lon:36.1000},
+ {id:'C10',name:'مركز دير الزور',type:'دفاع مدني',gov:'دير الزور',lat:35.3300,lon:40.1400},
+ {id:'C11',name:'نقطة سرمدا الإسعافية',type:'إسعاف',gov:'إدلب',lat:36.1800,lon:36.7200},
+ {id:'C12',name:'نقطة دوما الطبية',type:'نقطة طبية',gov:'دمشق',lat:33.5700,lon:36.4000},
+];
+const SEED_REPS=[
+ {id:'#CD-10024',type:'حريق',details:'حريق مستودع — الدخان كثيف',lat:35.9350,lon:36.6350,phone:'09xxxxxxxx',time:Date.now()-42*60000,status:'new',center:null,sub:null,timeline:[['استلام','وصل البلاغ للمركزية']]},
+ {id:'#CD-10026',type:'انهيارات',details:'انهيار جزئي بسقف — عائلة عالقة',lat:35.6600,lon:36.6800,phone:'09xxxxxxxx',time:Date.now()-18*60000,status:'new',center:null,sub:null,timeline:[['استلام','وصل البلاغ للمركزية']]},
+];
+function load(){ try{const d=JSON.parse(localStorage.getItem(LS)); if(d&&d.centers&&d.reports) return d;}catch{} return {centers:SEED_CENTERS,reports:SEED_REPS,seq:10027,outbox:[]}; }
+let DB=load(); if(!DB.outbox)DB.outbox=[];
+function save(){ try{localStorage.setItem(LS,JSON.stringify(DB));}catch{toast('⚠️ التخزين ممتلئ — الصور الكبيرة لا تُحفظ');} }
+let citizen={lat:null,lon:null,acc:null,manual:false}, selId=null, timers={}, pendingPhoto=null, pendingRole=null;
+let mapC,mapO,markC,lyrO=null,curType='حريق';
+function govs(){ return [...new Set(DB.centers.map(c=>c.gov))]; }
+
+/* شاشة الإقلاع */
+(function boot(){
+ const lines=['$ med --boot --syria','> init MED v2.0 ... OK','> centers db [12] ... OK','> smart-dispatch (30s) ... OK','> developer :: <span class="dev">محمد الحسين</span>','> ready _'];
+ const el=$('#bootTerm'); let i=0;
+ (function next(){ if(i<lines.length){ el.innerHTML+=lines[i]+'\n'; i++; setTimeout(next,420); }
+  else { el.innerHTML+='<span class="cursor"></span>'; $('#enterApp').style.display='block'; } })();
+})();
+$('#enterApp').onclick=()=>{ $('#splash').classList.add('off'); $('#gpsBtn').click(); };
+
+/* أدوات */
+function toast(t){ const d=document.createElement('div');d.className='toastmsg';d.innerHTML=t;$('#toast').appendChild(d);setTimeout(()=>d.remove(),6000); }
+function quiet(){ return $('#silentMode')&&$('#silentMode').checked; }
+function beep(){ if(quiet())return; try{const c=new (window.AudioContext||window.webkitAudioContext)();const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.frequency.value=880;g.gain.setValueAtTime(.2,c.currentTime);o.start();o.stop(c.currentTime+.6);}catch{} try{navigator.vibrate([300,100,300]);}catch{} }
+function hav(a,b,c,d){ const R=6371,r=Math.PI/180;const h=Math.sin((c-a)*r/2)**2+Math.cos(a*r)*Math.cos(c*r)*Math.sin((d-b)*r/2)**2;return 2*R*Math.asin(Math.sqrt(h)); }
+function nearest(lat,lon,list){ return (list||DB.centers).map(c=>({...c,d:hav(lat,lon,c.lat,c.lon)})).sort((x,y)=>x.d-y.d); }
+function eta(d){ return Math.max(2,Math.round(d/40*60)); }
+function esc(s){return String(s??'').replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));}
+function stName(s){ return {new:'🆕 جديد',ack:'✅ مؤكد',to_sub:'🏢 عند الفرعية',dispatched:'📤 مُسند',enroute:'🚒 في الطريق',onscene:'📍 بالموقع',closed:'✔ مغلق',auto:'🤖 إسناد تلقائي'}[s]||s; }
+
+/* دخول بالأدوار */
+function go(r){
+ if(PINS[r]&&!AUTH[r]){ pendingRole=r; $('#authTitle').textContent='🔒 دخول '+PINS[r].name;
+  $('#authHint').textContent='هذه الشاشة للكوادر فقط. (تجريبي PIN: '+PINS[r].pin+')';
+  $('#authPin').value=''; $('#authModal').classList.add('on'); return; }
+ $$('.role,.nav button').forEach(b=>{b.classList.toggle('active',b.dataset.r===r);b.classList.toggle('on',b.dataset.r===r);});
+ $$('.view').forEach(v=>v.classList.remove('on')); $('#v-'+r).classList.add('on');
+ if(r==='central'){renderStats();renderInbox();setTimeout(()=>{mapO&&mapO.invalidateSize();},200);}
+ if(r==='sub'){renderSub();}
+ if(r==='field'){renderField();}
+ if(r==='db'){renderDb();}
+ window.scrollTo({top:0,behavior:'smooth'});
+}
+$$('.role,.nav button').forEach(b=>b.onclick=()=>go(b.dataset.r));
+$('#authOk').onclick=()=>{ if($('#authPin').value===PINS[pendingRole].pin){ AUTH[pendingRole]=true; $('#authModal').classList.remove('on'); go(pendingRole); toast('✅ مرحباً — '+PINS[pendingRole].name); } else toast('🛑 رمز خاطئ'); };
+$('#authCancel').onclick=()=>$('#authModal').classList.remove('on');
+
+/* خرائط */
+function initMaps(){
+ mapC=L.map('mapC').setView([35.93,36.63],11);
+ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(mapC);
+ mapC.on('click',e=>{ if(!citizen.manual) return; setCitizen(e.latlng.lat,e.latlng.lng,null); toast('📌 تم تثبيت الموقع يدوياً'); });
+ mapO=L.map('mapO').setView([35.8,36.6],9);
+ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(mapO);
+ const g=govs(); $('#fwdGov').innerHTML=g.map(x=>`<option>${x}</option>`).join('');
+ $('#subGov').innerHTML=g.map(x=>`<option>${x}</option>`).join('');
+ $('#nGov').innerHTML=g.map(x=>`<option>${x}</option>`).join('');
+}
+function setCitizen(lat,lon,acc){ citizen.lat=lat;citizen.lon=lon;citizen.acc=acc;
+ $('#cCoords').textContent=lat.toFixed(5)+', '+lon.toFixed(5);
+ $('#cAcc').textContent=acc?('±'+Math.round(acc)+' م'):'تثبيت يدوي';
+ if(markC)markC.remove(); markC=L.marker([lat,lon]).addTo(mapC).bindPopup('موقعك').openPopup(); mapC.setView([lat,lon],14);
+}
+function gpsStatus(t){ $('#gpsStatus').innerHTML=t; }
+$('#gpsBtn').onclick=()=>{
+ if(!('geolocation' in navigator)){ gpsStatus('⚠️ المتصفح لا يدعم GPS هنا — ثبّت موقعك يدوياً 📌'); toast('⚠️ لا GPS — ثبّت يدوياً'); return; }
+ if(!window.isSecureContext){ gpsStatus('⚠️ الصفحة مفتوحة عبر HTTP غير آمن — المتصفح يحجب الموقع. افتحها عبر HTTPS أو استخدم تطبيق MED (APK). يمكنك التثبيت اليدوي 📌'); }
+ gpsStatus('⏳ جارٍ تحديد موقعك... (فعّل GPS وانتظر)');
+ let done=false, triedLow=false;
+ const ok=p=>{ if(done)return; done=true; citizen.manual=false;
+  setCitizen(p.coords.latitude,p.coords.longitude,p.coords.accuracy);
+  gpsStatus('✅ تم: بدقة ±'+Math.round(p.coords.accuracy||0)+' م');
+  toast('✅ موقعك بدقة ±'+Math.round(p.coords.accuracy||0)+' م'); };
+ const fail=e=>{
+  if(done)return;
+  if(e&&e.code===1){ done=true; gpsStatus('🛑 رفضت الصلاحية — افتح إعدادات المتصفح/النظام ← الموقع ← سماح، ثم أعد المحاولة. أو ثبّت يدوياً 📌'); toast('🛑 اسمح بالوصول للموقع من إعدادات المتصفح'); return; }
+  if(!triedLow){ triedLow=true; gpsStatus('⏳ المحاولة الدقيقة فشلت — أعيد المحاولة (شبكة/WiFi)...');
+   navigator.geolocation.getCurrentPosition(ok,fail2,{enableHighAccuracy:false,timeout:20000,maximumAge:60000}); return; }
+  fail2(e); };
+ const fail2=e=>{ if(done)return; done=true;
+  const m={1:'مرفوضة الصلاحية',2:'الموقع غير متاح (فعّل GPS)',3:'انتهت المهلة'}[(e&&e.code)||0]||'خطأ غير معروف';
+  gpsStatus('⚠️ تعذّر GPS ('+m+') — ثبّت موقعك يدوياً على الخريطة 📌');
+  toast('⚠️ تعذّر GPS: '+m); };
+ try{ navigator.geolocation.getCurrentPosition(ok,fail,{enableHighAccuracy:true,timeout:12000,maximumAge:0}); }
+ catch(err){ fail2({code:2}); }
+};
+$('#pinBtn').onclick=()=>{citizen.manual=true;toast('📌 اضغط على الخريطة لتثبيت موقعك');};
+$('#sosBtn').onclick=()=>{ $('#gpsBtn').click(); $('#mapC').scrollIntoView({behavior:'smooth'}); };
+$$('#ctype .type').forEach(t=>t.onclick=()=>{$$('#ctype .type').forEach(x=>x.classList.remove('sel'));t.classList.add('sel');curType=t.dataset.t;});
+$('#cPhoto').onchange=()=>{ const f=$('#cPhoto').files[0]; if(!f)return;
+ const img=new Image(); img.onload=()=>{ const c=document.createElement('canvas'); const s=Math.min(1,800/Math.max(img.width,img.height));
+  c.width=img.width*s;c.height=img.height*s;c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+  pendingPhoto=c.toDataURL('image/jpeg',.7); $('#photoPrev').src=pendingPhoto;$('#photoPrev').style.display='block'; };
+ img.src=URL.createObjectURL(f); };
+
+/* إرسال + طابور أوفلاين */
+$('#sendBtn').onclick=()=>{
+ if(citizen.lat==null){ toast('🛑 <b>الموقع إجباري:</b> البلاغ لن يُرسل بدونه.');beep();return; }
+ const id='#CD-'+(DB.seq++);
+ const r={id,type:curType,details:$('#cDetails').value||'—',lat:citizen.lat,lon:citizen.lon,phone:$('#cPhone').value||'—',photo:pendingPhoto,time:Date.now(),status:'new',center:null,sub:null,timeline:[['إرسال','أرسل المواطن البلاغ بإحداثيات دقيقة']]};
+ if(!navigator.onLine){ DB.outbox.push(r);save();renderMy();toast('📵 بلا اتصال — حُفظ البلاغ وسيُرسل تلقائياً');showSms(r);return; }
+ DB.reports.unshift(r);save();renderMy();renderInbox();renderStats();
+ toast(`✅ أُرسل بلاغك <b dir="ltr">${id}</b> للمركزية`);beep();showSms(r);
+ pendingPhoto=null;$('#photoPrev').style.display='none';$('#cPhoto').value='';
+};
+function showSms(r){ const body=encodeURIComponent(`MED ${r.id} ${r.type} موقعي: ${r.lat.toFixed(5)},${r.lon.toFixed(5)} https://maps.google.com/?q=${r.lat},${r.lon}`);
+ $('#smsBox').innerHTML=`<div class="row"><a class="btn btn-ghost" style="text-decoration:none;flex:1" href="sms:?&body=${body}">💬 إرسال الموقع SMS احتياطياً</a></div>`; }
+window.addEventListener('online',()=>{ if(!DB.outbox.length)return;
+ DB.outbox.forEach(r=>DB.reports.unshift(r)); const n=DB.outbox.length; DB.outbox=[];save();renderMy();renderInbox();toast(`📶 عاد الاتصال — أُرسلت ${n} بلاغات معلقة`); });
+function renderMy(){
+ const q=DB.outbox.map(r=>`<div class="rep"><span class="id">${r.id}</span> — ${r.type} <span class="badge">⏳ بانتظار الشبكة</span></div>`).join('');
+ const m=DB.reports.slice(0,5).map(r=>`<div class="rep"><span class="id">${r.id}</span> — ${r.type} <span class="badge">${stName(r.status)}</span><div class="small">${new Date(r.time).toLocaleString('ar')} • ${r.center?('→ '+esc(r.center)):r.sub?('→ فرعية '+esc(r.sub)):'بالمركزية'}</div></div>`).join('');
+ $('#myReps').innerHTML=(q+m)||'<div class="small">لا بلاغات بعد.</div>';
+}
+
+/* المركزية */
+function renderStats(){
+ const t=DB.reports.length, n=DB.reports.filter(r=>r.status==='new').length,
+  a=DB.reports.filter(r=>!['closed'].includes(r.status)&&r.status!=='new').length,
+  c=DB.reports.filter(r=>r.status==='closed').length;
+ const delays=DB.reports.filter(r=>r.ackDelay!=null).map(r=>r.ackDelay);
+ const avg=delays.length?Math.round(delays.reduce((x,y)=>x+y,0)/delays.length):0;
+ $('#stats').innerHTML=`<div class="stat"><b>${t}</b><span class="small">كل البلاغات</span></div><div class="stat"><b style="color:var(--red)">${n}</b><span class="small">بانتظار</span></div><div class="stat"><b style="color:var(--gold)">${a}</b><span class="small">نشطة</span></div><div class="stat"><b style="color:var(--green)">${c}</b><span class="small">مغلقة (متوسط التأكيد ${avg}ث)</span></div>`;
+}
+function renderInbox(){
+ const pend=DB.reports.filter(r=>r.status==='new').length;
+ $('#pendingCount').textContent=pend?`(${pend})`:'';
+ $('#inbox').innerHTML=DB.reports.length?DB.reports.map(r=>`
+  <div class="rep ${selId===r.id?'sel':''}" data-id="${r.id}">
+   <span class="id">${r.id}</span> <b>${r.type==='حريق'?'🔥':r.type==='إسعاف'?'🚑':r.type==='إنقاذ'?'🧗':'🏚️'} ${r.type}</b>
+   <span class="badge ${r.status==='new'?'new':r.status==='closed'?'done':'proc'}">${stName(r.status)}</span>
+   <div class="small">${esc(r.details)} — ${new Date(r.time).toLocaleString('ar')}${r.sub?(' • 🏢 '+esc(r.sub)):''}</div>
+   ${r.status==='new'?`<div class="timer" id="tm-${r.id.replace('#','')}">30</div><div class="row"><button class="btn btn-green" data-ack="${r.id}">✅ تأكيد الاستلام</button></div>`:''}
+  </div>`).join(''):'<div class="small">لا بلاغات.</div>';
+ $$('#inbox .rep').forEach(el=>el.onclick=e=>{ if(e.target.dataset.ack)return; selId=el.dataset.id; renderInbox(); renderSel(); });
+ $$('#inbox [data-ack]').forEach(b=>b.onclick=()=>ackRep(b.dataset.ack));
+ DB.reports.filter(r=>r.status==='new').forEach(startTimer);
+}
+function startTimer(r){ if(timers[r.id])return; let left=30; const key=r.id.replace('#','');
+ timers[r.id]=setInterval(()=>{ left--; const el=document.getElementById('tm-'+key); if(el)el.textContent=left;
+  if(left<=0){ clearInterval(timers[r.id]);delete timers[r.id]; autoAssign(r.id); } },1000); }
+function ackRep(id){ const r=DB.reports.find(x=>x.id===id); if(!r||r.status!=='new')return;
+ if(timers[id]){clearInterval(timers[id]);delete timers[id];}
+ r.status='ack';r.ackDelay=Math.round((Date.now()-r.time)/1000);r.timeline.push(['تأكيد','أكّد المشغّل الاستلام']);save();renderInbox();renderSel();renderStats();toast(`✅ تم تأكيد ${id}`); }
+function autoAssign(id){ const r=DB.reports.find(x=>x.id===id); if(!r||r.status!=='new')return;
+ const n=nearest(r.lat,r.lon)[0];
+ r.status='auto';r.center=n.name;r.timeline.push(['إسناد تلقائي','مهلة 30ث — أُسند لـ '+n.name]);
+ save();renderInbox();renderSel();renderStats();beep();toast(`🤖 <b>إسناد تلقائي:</b> ${id} ← ${esc(n.name)}`); }
+function renderSel(){
+ const r=DB.reports.find(x=>x.id===selId); if(!r)return;
+ if(lyrO){mapO.removeLayer(lyrO);} lyrO=L.layerGroup().addTo(mapO);
+ L.marker([r.lat,r.lon]).addTo(lyrO).bindPopup('المواطن '+r.id).openPopup();
+ DB.centers.forEach(c=>{ L.circleMarker([c.lat,c.lon],{radius:7,color:c.type==='إسعاف'?'red':'green'}).addTo(lyrO).bindPopup(c.name); });
+ mapO.setView([r.lat,r.lon],11);
+ const ns=nearest(r.lat,r.lon).slice(0,4), locked=r.center!=null;
+ $('#selInfo').innerHTML=`<div class="kv"><span>البلاغ</span><b dir="ltr">${r.id}</b></div>
+  <div class="kv"><span>النوع</span><b>${r.type}</b></div>
+  <div class="kv"><span>التفاصيل</span><b>${esc(r.details)}</b></div>
+  <div class="kv"><span>الهاتف</span><b dir="ltr">${esc(r.phone)}</b></div>
+  <div class="kv"><span>الحالة</span><b>${stName(r.status)}${locked?' — 🔒 '+esc(r.center):''}${r.sub&&!locked?' — 🏢 '+esc(r.sub):''}</b></div>
+  ${r.photo?`<img src="${r.photo}" class="thumb">`:''}
+  <div class="tl">${r.timeline.map(t=>`• <b>${esc(t[0])}:</b> ${esc(t[1])}`).join('<br>')}</div>`;
+ $('#nearList').innerHTML='<h3 style="font-size:13px;color:var(--gold)">🏥 أقرب المراكز</h3>'+ns.map((n,i)=>`
+  <label class="center-row"><span><span class="dot" style="background:${n.type==='إسعاف'?'var(--red)':'var(--green)'}"></span> ${esc(n.name)} <span class="small">(${n.gov})</span></span>
+  <span><input type="radio" name="nc" value="${esc(n.name)}" ${i===0?'checked':''} ${locked?'disabled':''}> <b dir="ltr">${n.d.toFixed(1)} كم</b> <span class="small">~${eta(n.d)} د</span></span></label>`).join('')
+  +(DB.centers.length>4?`<select id="allCenters" ${locked?'disabled':''} style="margin-top:6px"><option value="">— أو أي مركز —</option>${DB.centers.map(c=>`<option>${esc(c.name)}</option>`).join('')}</select>`:'');
+ $('#dispatchBtn').disabled=locked;
+ $('#dispatchBtn').textContent=locked?('🔒 أُرسل إلى '+r.center):('📤 إرسال إلى '+(ns[0]?ns[0].name:'المركز'));
+ $('#fwdBtn').disabled=locked||r.status==='to_sub';
+}
+$('#dispatchBtn').onclick=()=>{
+ const r=DB.reports.find(x=>x.id===selId); if(!r||r.center)return;
+ let name=(document.querySelector('input[name=nc]:checked')||{}).value;
+ const extra=$('#allCenters'); if(extra&&extra.value)name=extra.value;
+ if(!name){toast('اختر المركز');return;}
+ r.center=name;r.status='dispatched';r.timeline.push(['إسناد','المركزية → '+name]);
+ save();renderInbox();renderSel();renderStats();beep();toast(`📤 ${r.id} → <b>${esc(name)}</b>`); };
+$('#fwdBtn').onclick=()=>{
+ const r=DB.reports.find(x=>x.id===selId); if(!r||r.center)return;
+ const g=$('#fwdGov').value; r.sub=g; if(r.status!=='to_sub'){r.status='to_sub';}
+ r.timeline.push(['تحويل','المركزية → فرعية '+g]); save();renderInbox();renderSel();renderSub();toast(`🏢 حُوّل ${r.id} لفرعية <b>${g}</b>`); };
+
+/* الفرعية */
+function renderSub(){
+ const g=$('#subGov').value||govs()[0];
+ const list=DB.reports.filter(r=>r.sub===g&&!r.center);
+ $('#subList').innerHTML=list.length?list.map(r=>{ const ns=nearest(r.lat,r.lon,DB.centers.filter(c=>c.gov===g)); const opts=ns.length?ns:nearest(r.lat,r.lon).slice(0,3);
+  return `<div class="rep"><span class="id">${r.id}</span> <b>${r.type}</b> <span class="badge proc">${stName(r.status)}</span>
+  <div class="small">${esc(r.details)} • 📍 <span dir="ltr">${r.lat.toFixed(4)}, ${r.lon.toFixed(4)}</span></div>
+  <select id="subc-${r.id.replace('#','')}">${opts.map(n=>`<option value="${esc(n.name)}">${esc(n.name)} — ${n.d.toFixed(1)} كم</option>`).join('')}</select>
+  <div class="row"><button class="btn btn-orange" data-sub="${r.id}">📤 إسناد لمركز ${g}</button></div></div>`;}).join('')
+  :'<div class="small">لا بلاغات محوَّلة لهذه المحافظة حالياً.</div>';
+ $$('#subList [data-sub]').forEach(b=>b.onclick=()=>{ const r=DB.reports.find(x=>x.id===b.dataset.sub);
+  const name=$('#subc-'+r.id.replace('#','')).value; r.center=name;r.status='dispatched';r.timeline.push(['إسناد فرعي','فرعية '+g+' → '+name]);
+  save();renderSub();renderInbox();renderStats();beep();toast(`📤 ${r.id} → <b>${esc(name)}</b>`); });
+}
+$('#subGov').onchange=renderSub;
+
+/* الميداني */
+function renderField(){
+ $('#fieldCenter').innerHTML=DB.centers.map(c=>`<option>${esc(c.name)}</option>`).join('');
+ const cn=$('#fieldCenter').value||DB.centers[0]?.name;
+ const list=DB.reports.filter(r=>r.center===cn);
+ $('#fieldList').innerHTML=list.length?list.map(r=>`
+  <div class="rep"><span class="id">${r.id}</span> <b>${r.type}</b> <span class="badge proc">${stName(r.status)}</span>
+  <div class="small">${esc(r.details)} • 📍 <span dir="ltr">${r.lat.toFixed(4)}, ${r.lon.toFixed(4)}</span> • <a target="_blank" href="https://www.google.com/maps?q=${r.lat},${r.lon}">الاتجاه 🗺️</a></div>
+  ${r.photo?`<img src="${r.photo}" class="thumb">`:''}
+  <div class="row">
+   ${r.status==='dispatched'?`<button class="btn btn-orange" data-mv="${r.id}|enroute">🚒 تحرك الفريق</button>`:''}
+   ${r.status==='enroute'?`<button class="btn btn-orange" data-mv="${r.id}|onscene">📍 وصلنا الموقع</button>`:''}
+   ${['onscene','auto'].includes(r.status)?`<button class="btn btn-green" data-mv="${r.id}|closed">✔ إغلاق البلاغ</button>`:''}
+  </div><div class="tl">${r.timeline.map(t=>`• <b>${esc(t[0])}:</b> ${esc(t[1])}`).join('<br>')}</div></div>`).join('')
+  :'<div class="small">لا بلاغات مسندة لهذا المركز.</div>';
+ $$('#fieldList [data-mv]').forEach(b=>b.onclick=()=>{ const [id,st]=b.dataset.mv.split('|');
+  const r=DB.reports.find(x=>x.id===id); if(!r)return;
+  r.status=st;r.timeline.push(['ميداني',stName(st)+' — '+cn]);save();renderField();renderInbox();renderStats();
+  toast(`📡 المركزية: ${r.id} ← ${stName(st)}`); });
+}
+$('#fieldCenter').onchange=renderField;
+
+/* الإدارة */
+function renderDb(){ $('#dbList').innerHTML=`<table><tr><th>المركز</th><th>المحافظة</th><th>إحداثيات</th><th></th></tr>${DB.centers.map((c,i)=>`<tr><td>${esc(c.name)}<br><span class="small">${c.type}</span></td><td>${esc(c.gov||'—')}</td><td dir="ltr" style="font-family:monospace">${c.lat.toFixed(3)}, ${c.lon.toFixed(3)}</td><td><button class="btn btn-ghost" data-del="${i}" style="padding:4px 8px">🗑️</button></td></tr>`).join('')}</table>`;
+ $$('#dbList [data-del]').forEach(b=>b.onclick=()=>{DB.centers.splice(+b.dataset.del,1);save();renderDb();}); }
+$('#addCenter').onclick=()=>{ const n=$('#nName').value.trim(),la=parseFloat($('#nLat').value),lo=parseFloat($('#nLon').value);
+ if(!n||!isFinite(la)||!isFinite(lo)){toast('⚠️ أدخل الاسم والإحداثيات');return;}
+ DB.centers.push({id:'C'+Date.now(),name:n,type:$('#nType').value,gov:$('#nGov').value,lat:la,lon:lo});save();renderDb();$('#nName').value='';toast('✅ أُضيف المركز'); };
+$('#resetDb').onclick=()=>{DB.centers=SEED_CENTERS;save();renderDb();};
+
+/* كاميرا */
+$('#camBtn').onclick=async()=>{ $('#camModal').classList.add('on');
+ try{ const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}); $('#camVideo').srcObject=s; }catch{ $('#snaps').innerHTML='⚠️ تعذّر الكاميرا (تحقق من الصلاحيات وHTTPS).'; } };
+$('#camClose').onclick=()=>{ $('#camModal').classList.remove('on'); const v=$('#camVideo'); if(v.srcObject)v.srcObject.getTracks().forEach(t=>t.stop()); };
+$('#snapBtn').onclick=()=>{ const v=$('#camVideo'),c=document.createElement('canvas');c.width=v.videoWidth||640;c.height=v.videoHeight||480;
+ c.getContext('2d').drawImage(v,0,0); const url=c.toDataURL('image/jpeg',.7);
+ $('#snaps').innerHTML+=`<div>📸 لقطة ${new Date().toLocaleTimeString('ar')} <a href="${url}" download="med-doc.jpg">تحميل</a></div>`; toast('📸 أُرفقت لقطة'); };
+
+initMaps();renderMy();renderStats();renderInbox();renderField();renderDb();renderSub();
+</script>
+</body>
+</html>
