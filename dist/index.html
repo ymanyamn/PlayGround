@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TaskFlow — إدارة المهام الشخصية</title>
+<style>
+:root{--bg:#f4f6fb;--card:#ffffff;--text:#1a2233;--muted:#6b7a99;--primary:#4f46e5;--primary2:#7c3aed;--ok:#16a34a;--warn:#f59e0b;--high:#ef4444;--border:#e5e9f2}
+[data-theme="dark"]{--bg:#0f1422;--card:#1a2238;--text:#eef2ff;--muted:#9aa7c7;--border:#2a3553}
+*{box-sizing:border-box}body{margin:0;font-family:"Segoe UI",Tahoma,Arial,sans-serif;background:var(--bg);color:var(--text)}
+header{background:linear-gradient(135deg,var(--primary),var(--primary2));color:#fff;padding:22px 18px;position:sticky;top:0;z-index:5}
+.wrap{max-width:960px;margin:0 auto;padding:0 16px}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.logo{font-size:26px;font-weight:800}.sub{opacity:.9;font-size:14px;margin-top:4px}
+.btn{border:0;border-radius:12px;padding:10px 16px;font-size:14px;font-weight:700;cursor:pointer}
+.btn-p{background:#fff;color:var(--primary)}.btn-primary{background:linear-gradient(135deg,var(--primary),var(--primary2));color:#fff}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text)}
+.iconbtn{border:1px solid rgba(255,255,255,.4);background:rgba(255,255,255,.15);color:#fff;border-radius:10px;padding:8px 12px;cursor:pointer;font-weight:700}
+main{padding:18px 0 60px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;box-shadow:0 6px 20px rgba(30,40,90,.06)}
+.controls{display:grid;gap:12px;margin:16px 0}
+.search{width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:15px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap}
+.tab{padding:8px 14px;border-radius:999px;border:1px solid var(--border);background:var(--card);color:var(--text);cursor:pointer;font-size:13px;font-weight:700}
+.tab.active{background:var(--text);color:var(--bg);border-color:var(--text)}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+#list{display:grid;gap:12px;margin-top:6px}
+.task{display:flex;gap:12px;align-items:flex-start;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px}
+.task.done{opacity:.75}.task.done h3{text-decoration:line-through}
+.check{width:26px;height:26px;border-radius:50%;border:2px solid var(--primary);background:transparent;cursor:pointer;flex-shrink:0;font-size:15px;color:#fff;line-height:1}
+.check.on{background:var(--ok);border-color:var(--ok)}
+.task h3{margin:0 0 4px;font-size:16px}.task p{margin:0 0 8px;color:var(--muted);font-size:13px}
+.meta{display:flex;gap:6px;flex-wrap:wrap;font-size:12px}
+.pill{padding:3px 10px;border-radius:999px;font-weight:700}
+.cat-عمل{background:#dbeafe;color:#1d4ed8}.cat-شخصي{background:#dcfce7;color:#15803d}.cat-دراسة{background:#fef3c7;color:#b45309}
+.pri-عالية{background:#fee2e2;color:#b91c1c}.pri-متوسطة{background:#ffedd5;color:#c2410c}.pri-منخفضة{background:#e0e7ff;color:#4338ca}
+.date{color:var(--muted)}
+.row-actions{margin-right:auto;display:flex;gap:6px;flex-shrink:0}
+.mini{border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:9px;padding:6px 10px;cursor:pointer;font-size:12px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:16px 0}
+.stat{text-align:center}.stat b{font-size:26px;display:block}.bar{height:10px;background:var(--border);border-radius:99px;overflow:hidden;margin-top:10px}.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--primary),var(--primary2))}
+.empty{text-align:center;color:var(--muted);padding:34px 10px}
+dialog{border:1px solid var(--border);border-radius:16px;padding:0;max-width:480px;width:calc(100vw - 32px);background:var(--card);color:var(--text)}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+.form{padding:18px;display:grid;gap:10px}
+.form input,.form textarea,.form select{padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:14px;font-family:inherit}
+.form label{font-size:13px;font-weight:700}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+footer{text-align:center;color:var(--muted);font-size:12px;padding:20px}
+@media(max-width:640px){.stats{grid-template-columns:1fr 1fr 1fr}.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+<div class="wrap topbar">
+<div><div class="logo">✅ TaskFlow</div><div class="sub">تطبيق إدارة المهام — ويب / موبايل بنفس الكود (React + Expo)</div></div>
+<div><button class="iconbtn" id="themeBtn" type="button">🌙 ليلي</button></div>
+</div>
+</header>
+<main class="wrap">
+<section class="card">
+<h2 style="margin:0 0 4px">مهامي اليومية</h2>
+<div style="color:var(--muted);font-size:13px">إضافة • تعديل • حذف بتأكيد • إكمال • بحث • فلترة • إحصائيات • حفظ تلقائي</div>
+<div class="controls">
+<input class="search" id="q" type="search" placeholder="🔍 ابحث في المهام…" aria-label="بحث" />
+<div class="tabs" role="tablist">
+<button class="tab active" data-f="all" type="button">الكل</button>
+<button class="tab" data-f="active" type="button">النشطة</button>
+<button class="tab" data-f="done" type="button">المكتملة</button>
+</div>
+<div class="chips">
+<button class="tab active" data-c="all" type="button">كل التصنيفات</button>
+<button class="tab" data-c="عمل" type="button">💼 عمل</button>
+<button class="tab" data-c="شخصي" type="button">🏠 شخصي</button>
+<button class="tab" data-c="دراسة" type="button">📚 دراسة</button>
+</div>
+<div><button class="btn btn-primary" id="addBtn" type="button">＋ إضافة مهمة جديدة</button></div>
+</div>
+</section>
+<section class="stats">
+<div class="card stat"><b id="sTotal">0</b><span>إجمالي المهام</span></div>
+<div class="card stat"><b id="sDone">0</b><span>المكتملة</span></div>
+<div class="card stat"><b id="sPct">0%</b><span>نسبة الإنجاز</span></div>
+</section>
+<section class="card">
+<h3 style="margin-top:0">التقدم</h3>
+<div class="bar"><i id="bar" style="width:0%"></i></div>
+<p id="sLine" style="color:var(--muted);font-size:13px"></p>
+</section>
+<section id="list" aria-live="polite"></section>
+<div class="card empty" id="empty" hidden>لا توجد مهام مطابقة. أضف مهمتك الأولى من الزر أعلاه.</div>
+<footer>TaskFlow v1.0 — React 18 • TypeScript • Zustand • AsyncStorage • React Navigation • Expo SDK 51</footer>
+</main>
+<dialog id="dlg">
+<form method="dialog" class="form" id="form">
+<h3 id="dlgTitle" style="margin:0">مهمة جديدة</h3>
+<label>العنوان<input id="fTitle" required maxlength="80" placeholder="مثال: مراجعة درس الرياضيات" /></label>
+<label>الوصف<textarea id="fDesc" rows="3" placeholder="تفاصيل اختيارية…"></textarea></label>
+<div class="grid2">
+<label>الأولوية<select id="fPri"><option>عالية</option><option selected>متوسطة</option><option>منخفضة</option></select></label>
+<label>التصنيف<select id="fCat"><option>عمل</option><option>شخصي</option><option>دراسة</option></select></label>
+</div>
+<label>التاريخ<input id="fDate" type="date" /></label>
+<div style="display:flex;gap:8px;justify-content:flex-start">
+<button class="btn btn-primary" id="saveBtn" type="submit" value="default">حفظ</button>
+<button class="btn btn-ghost" type="submit" value="cancel" formnovalidate>إلغاء</button>
+</div>
+</form>
+</dialog>
+<script>
+const KEY="taskflow-tasks-v1",TKEY="taskflow-theme-v1";
+const seed=[
+{id:"s1",title:"تسليم تقرير المشروع",desc:"مراجعة الأرقام وإرسال النسخة النهائية للمدير.",pri:"عالية",cat:"عمل",date:new Date().toISOString().slice(0,10),done:false},
+{id:"s2",title:"تمارين رياضية 30 دقيقة",desc:"مشي + تمارين منزلية خفيفة.",pri:"متوسطة",cat:"شخصي",date:new Date().toISOString().slice(0,10),done:true},
+{id:"s3",title:"مذاكرة TypeScript",desc:"إعادة قراءة الأنواع والـ Generics وحل تمرينين.",pri:"منخفضة",cat:"دراسة",date:new Date(Date.now()+864e5).toISOString().slice(0,10),done:false}];
+let tasks=[];try{tasks=JSON.parse(localStorage.getItem(KEY)||"null")||seed}catch{tasks=seed}
+let filter="all",cat="all",editing=null;
+const $=id=>document.getElementById(id);
+function save(){localStorage.setItem(KEY,JSON.stringify(tasks))}
+function applyTheme(t){document.documentElement.dataset.theme=t;localStorage.setItem(TKEY,t);$("themeBtn").textContent=t==="dark"?"☀️ نهاري":"🌙 ليلي"}
+applyTheme(localStorage.getItem(TKEY)||"light");
+$("themeBtn").onclick=()=>applyTheme(document.documentElement.dataset.theme==="dark"?"light":"dark");
+document.querySelectorAll("[data-f]").forEach(b=>b.onclick=()=>{document.querySelectorAll("[data-f]").forEach(x=>x.classList.remove("active"));b.classList.add("active");filter=b.dataset.f;render()});
+document.querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>{document.querySelectorAll("[data-c]").forEach(x=>x.classList.remove("active"));b.classList.add("active");cat=b.dataset.c;render()});
+$("q").oninput=render;
+$("addBtn").onclick=()=>{editing=null;$("dlgTitle").textContent="مهمة جديدة";$("form").reset();$("dlg").showModal()};
+$("form").onsubmit=e=>{if(e.submitter&&e.submitter.value==="cancel")return;e.preventDefault();
+const t=$("fTitle").value.trim();if(!t)return;
+const d={title:t,desc:$("fDesc").value.trim(),pri:$("fPri").value,cat:$("fCat").value,date:$("fDate").value||new Date().toISOString().slice(0,10)};
+if(editing){Object.assign(tasks.find(x=>x.id===editing),d)}else{tasks.unshift({id:"t"+Date.now(),done:false,...d})}
+save();$("dlg").close();render()};
+function render(){
+const q=$("q").value.trim();
+const rows=tasks.filter(t=>(filter==="all"||(filter==="done"?t.done:!t.done))&&(cat==="all"||t.cat===cat)&&(!q||(t.title+t.desc).includes(q)));
+const box=$("list");box.innerHTML="";
+rows.forEach(t=>{
+const el=document.createElement("article");el.className="task"+(t.done?" done":"");
+el.innerHTML=`<button class="check ${t.done?"on":""}" aria-label="toggle">${t.done?"✓":""}</button>
+<div><h3></h3><p></p><div class="meta"><span class="pill cat-${t.cat}">${t.cat}</span><span class="pill pri-${t.pri}">أولوية ${t.pri}</span><span class="date">📅 ${t.date}</span></div></div>
+<div class="row-actions"><button class="mini" data-a="edit">تعديل</button><button class="mini" data-a="del">حذف</button></div>`;
+el.querySelector("h3").textContent=t.title;el.querySelector("p").textContent=t.desc||"بدون وصف";
+el.querySelector(".check").onclick=()=>{t.done=!t.done;save();render()};
+el.querySelector('[data-a="edit"]').onclick=()=>{editing=t.id;$("dlgTitle").textContent="تعديل المهمة";$("fTitle").value=t.title;$("fDesc").value=t.desc;$("fPri").value=t.pri;$("fCat").value=t.cat;$("fDate").value=t.date;$("dlg").showModal()};
+el.querySelector('[data-a="del"]').onclick=()=>{if(confirm(`حذف "${t.title}"؟ لا يمكن التراجع.`)){tasks=tasks.filter(x=>x.id!==t.id);save();render()}};
+box.appendChild(el)});
+$("empty").hidden=rows.length>0;
+const total=tasks.length,done=tasks.filter(t=>t.done).length,pct=total?Math.round(done/total*100):0;
+$("sTotal").textContent=total;$("sDone").textContent=done;$("sPct").textContent=pct+"%";$("bar").style.width=pct+"%";
+$("sLine").textContent=`أنجزت ${done} من أصل ${total} مهمة — ${pct}%`;
+}
+render();
+</script>
+</body>
+</html>
